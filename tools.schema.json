@@ -1,0 +1,816 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tawzee.ai/schemas/tools.schema.json",
+  "title": "Tawzee AI — Proposed Agent Tool Contracts",
+  "description": "PROPOSED tool contracts for the Tawzee AI coding agent. These contracts are NOT executable tools and are NOT automatically enabled inside Codex. They must be mapped to the agent's real capabilities or exposed through MCP when needed. Do not assume any tool listed here exists in the runtime; verify actual capabilities first. The 'default' keyword holds the catalog instance, which validates against this schema. See AGENTS.md (section 8) for scope and actual permission boundaries.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "tools"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/ToolContract"
+      }
+    }
+  },
+  "$defs": {
+    "RiskLevel": {
+      "description": "low: no confirmation needed. medium: allowed with logging, restricted scope. high: requires explicit user approval per use unless previously approved for the same scope. critical: forbidden unless the user gives explicit approval for that exact action.",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "Permission": {
+      "description": "Capability a tool requires from the runtime.",
+      "type": "string",
+      "enum": [
+        "fs:read",
+        "fs:write",
+        "exec:shell",
+        "exec:tests",
+        "db:read",
+        "project:progress"
+      ]
+    },
+    "ToolContract": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "inputSchema",
+        "outputSchema",
+        "permissions",
+        "riskLevel"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 20
+        },
+        "inputSchema": {
+          "$ref": "#/$defs/ObjectSchema"
+        },
+        "outputSchema": {
+          "$ref": "#/$defs/ObjectSchema"
+        },
+        "permissions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Permission"
+          }
+        },
+        "riskLevel": {
+          "$ref": "#/$defs/RiskLevel"
+        }
+      }
+    },
+    "ObjectSchema": {
+      "description": "A JSON Schema (draft 2020-12) describing an object.",
+      "type": "object",
+      "required": [
+        "type",
+        "properties"
+      ],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {
+          "type": [
+            "boolean",
+            "object"
+          ]
+        }
+      }
+    }
+  },
+  "default": {
+    "schemaVersion": "1.0.0",
+    "tools": [
+      {
+        "name": "read_file",
+        "description": "Read a text file inside the project root, optionally a line range. Must refuse paths outside the project and secret files such as .env.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project-relative path. Absolute paths and '..' segments are rejected."
+            },
+            "startLine": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endLine": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1048576,
+              "default": 262144
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "content",
+            "totalLines",
+            "truncated"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "totalLines": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "truncated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "permissions": [
+          "fs:read"
+        ],
+        "riskLevel": "low"
+      },
+      {
+        "name": "search_project",
+        "description": "Search project files by text, regular expression or file name, excluding vendor, node_modules, .git and secret files.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "literal",
+                "regex",
+                "filename"
+              ],
+              "default": "literal"
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Project-relative directories to limit the search."
+            },
+            "glob": {
+              "type": "string",
+              "description": "Optional glob filter such as app/Modules/**/*.php."
+            },
+            "caseSensitive": {
+              "type": "boolean",
+              "default": false
+            },
+            "maxResults": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "matches",
+            "truncated"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "matches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "truncated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "permissions": [
+          "fs:read"
+        ],
+        "riskLevel": "low"
+      },
+      {
+        "name": "edit_file",
+        "description": "Create a file, replace an exact unique text fragment, or append text inside the project root. Never deletes files; deletion requires run_command with user approval.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "operation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "create",
+                "replace_text",
+                "append"
+              ]
+            },
+            "content": {
+              "type": "string",
+              "description": "Full content for create, or text to append."
+            },
+            "oldText": {
+              "type": "string",
+              "description": "Exact text to replace; must match exactly one location."
+            },
+            "newText": {
+              "type": "string",
+              "description": "Replacement text for replace_text."
+            },
+            "overwrite": {
+              "type": "boolean",
+              "default": false,
+              "description": "Allow create to replace an existing file."
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "const": "replace_text"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "oldText",
+                  "newText"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "create",
+                      "append"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "changed",
+            "linesAdded",
+            "linesRemoved"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "changed": {
+              "type": "boolean"
+            },
+            "linesAdded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "linesRemoved": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "diffSummary": {
+              "type": "string"
+            }
+          }
+        },
+        "permissions": [
+          "fs:write"
+        ],
+        "riskLevel": "medium"
+      },
+      {
+        "name": "run_command",
+        "description": "Run one shell command in the project without shell interpolation. Follow AGENTS.md section 8 and actual runtime permissions; authorized local environment setup may inspect or update configuration without printing secrets. Destructive, out-of-scope, remote publishing and production actions need explicit approval.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "command",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Executable name, for example php, composer, npm or git."
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "cwd": {
+              "type": "string",
+              "default": ".",
+              "description": "Project-relative working directory."
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1800,
+              "default": 120
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Why the command is needed, for the audit trail."
+            },
+            "approvalReference": {
+              "type": "string",
+              "description": "Reference to the user's approval message when the command needs approval."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "exitCode",
+            "stdout",
+            "stderr",
+            "timedOut",
+            "durationMs"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "exitCode": {
+              "type": "integer"
+            },
+            "stdout": {
+              "type": "string"
+            },
+            "stderr": {
+              "type": "string"
+            },
+            "timedOut": {
+              "type": "boolean"
+            },
+            "truncated": {
+              "type": "boolean",
+              "default": false
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "permissions": [
+          "exec:shell"
+        ],
+        "riskLevel": "high"
+      },
+      {
+        "name": "run_tests",
+        "description": "Run the project's automated tests with Pest or PHPUnit on the isolated testing database and return a structured result. Never targets development or production data.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runner": {
+              "type": "string",
+              "enum": [
+                "pest",
+                "phpunit",
+                "artisan"
+              ],
+              "default": "pest"
+            },
+            "filter": {
+              "type": "string",
+              "description": "Test name filter."
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Project-relative test files or directories."
+            },
+            "testsuite": {
+              "type": "string"
+            },
+            "parallel": {
+              "type": "boolean",
+              "default": false
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 600
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "status",
+            "total",
+            "passed",
+            "failed",
+            "skipped",
+            "durationMs"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "passed",
+                "failed",
+                "error",
+                "not_run"
+              ]
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "passed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skipped": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failures": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "test",
+                  "message"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "test": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "permissions": [
+          "exec:tests"
+        ],
+        "riskLevel": "medium"
+      },
+      {
+        "name": "inspect_database",
+        "description": "Read-only inspection of the local or testing database schema and small row samples. Never modifies data and never targets production; sample rows must not be pasted into logs or reports.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "operation",
+            "connection"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "type": "string",
+              "enum": [
+                "list_tables",
+                "describe_table",
+                "list_indexes",
+                "list_constraints",
+                "sample_rows",
+                "explain_select"
+              ]
+            },
+            "connection": {
+              "type": "string",
+              "enum": [
+                "local",
+                "testing"
+              ]
+            },
+            "table": {
+              "type": "string",
+              "pattern": "^[a-z_][a-z0-9_]*$"
+            },
+            "query": {
+              "type": "string",
+              "description": "Single SELECT statement, only for explain_select."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "describe_table",
+                      "list_indexes",
+                      "list_constraints",
+                      "sample_rows"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "table"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "operation": {
+                    "const": "explain_select"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "operation",
+            "result"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "type": "string"
+            },
+            "result": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "rowCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "permissions": [
+          "db:read"
+        ],
+        "riskLevel": "medium"
+      },
+      {
+        "name": "update_progress",
+        "description": "Update a task status and the current phase and next task in TASKS.md. Marking a task Done requires at least one evidence entry showing a command that was actually run and its result.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "taskId",
+            "status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "pattern": "^P[0-8]-T[0-9]{2}$"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "Not Started",
+                "In Progress",
+                "Blocked",
+                "Done"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "command",
+                  "result"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "type": "string"
+                  },
+                  "result": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "blockedReason": {
+              "type": "string"
+            },
+            "nextTaskId": {
+              "type": "string",
+              "pattern": "^P[0-8]-T[0-9]{2}$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "Done"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "evidence"
+                ],
+                "properties": {
+                  "evidence": {
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "Blocked"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "blockedReason"
+                ]
+              }
+            }
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "taskId",
+            "previousStatus",
+            "newStatus",
+            "updatedFile"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "taskId": {
+              "type": "string"
+            },
+            "previousStatus": {
+              "type": "string",
+              "enum": [
+                "Not Started",
+                "In Progress",
+                "Blocked",
+                "Done"
+              ]
+            },
+            "newStatus": {
+              "type": "string",
+              "enum": [
+                "Not Started",
+                "In Progress",
+                "Blocked",
+                "Done"
+              ]
+            },
+            "updatedFile": {
+              "type": "string",
+              "const": "TASKS.md"
+            }
+          }
+        },
+        "permissions": [
+          "fs:write",
+          "project:progress"
+        ],
+        "riskLevel": "low"
+      }
+    ]
+  }
+}

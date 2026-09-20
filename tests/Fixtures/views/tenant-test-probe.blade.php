@@ -1,0 +1,1 @@
+<livewire:tenant-test-probe />
