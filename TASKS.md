@@ -6,9 +6,9 @@
 
 | البند | القيمة |
 |---|---|
-| **المرحلة الحالية** | المرحلة 1 — P1-T06 مكتملة؛ Phase 0 مكتملة على MariaDB |
-| **المهمة التالية** | `P1-T07` — سجل النشاط وخدمة تسجيل بسيطة؛ لم يبدأ |
-| **آخر تحديث** | 2026-09-20 — P1-T06: Done؛ P1-T07 وP2: Not Started |
+| **المرحلة الحالية** | المرحلة 1 مكتملة على MariaDB؛ Phase 0 مكتملة على MariaDB |
+| **المهمة التالية** | `P2-T01` — تقييم/تثبيت الأدوار والصلاحيات؛ لم يبدأ |
+| **آخر تحديث** | 2026-09-26 — P1-T07: Done على MariaDB؛ Phase 2: Not Started |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
 **الدليل:** عند `Done` تُضاف سطر «دليل» أسفل جدول المرحلة: الأمر الفعلي ونتيجته.
@@ -62,7 +62,7 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 | P1-T04 | تسجيل الدخول والخروج واستعادة كلمة المرور مع Rate Limiting؛ منع المعطّلين | AC: مستخدم معطّل لا يدخل؛ محاولات كثيرة تُحجب | Feature: دخول/رفض/تحديد المعدل/تعطيل | Done |
 | P1-T05 | Middleware يضبط الشركة الحالية من المستخدم فقط، وشاشة رئيسية بعد الدخول | لا يمكن ضبط الشركة من URL/Header | Feature: محاولة انتحال شركة | Done |
 | P1-T06 | أدوات اختبار عزل الشركات (Helpers/Traits) قابلة لإعادة الاستخدام | مساعد واحد يثبت أن مورد B غير مرئي لمستخدم A | Unit/Feature للمساعد نفسه | Done |
-| P1-T07 | سجل النشاط `activity_logs` وخدمة تسجيل بسيطة | تسجيل الفاعل والإجراء والموضوع بلا بيانات حساسة | Feature: يُسجَّل ويُعزل بين الشركات | Not Started |
+| P1-T07 | سجل النشاط `activity_logs` وخدمة تسجيل بسيطة | تسجيل الفاعل والإجراء والموضوع بلا بيانات حساسة | Feature: يُسجَّل ويُعزل بين الشركات | Done |
 
 ## المرحلة 2 — Roles & Permissions
 
@@ -395,3 +395,27 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 **الملفات المعدلة:** tests/Database/TenancyTest.php، README.md (طريقة الاستخدام وحدودها)، TASKS.md. لا ملفات تطبيق أو مسارات إنتاج أو واجهات أو migrations أو .env أو إعداد PostgreSQL معدلة. لم يلزم npm build أو فحص متصفح جديد؛ تكامل Livewire فُحص بطلبات HTTP في PHPUnit.
 
 **الحدود:** الإثبات على DocumentSequence والـfixtures المنفذة، لا على كل الموارد المستقبلية أو Workers. يجب على مستعمل المساعد إنشاء موردين في حالتي أعمال متكافئتين واختيار assertions تلائم semantics المورد، وإضافة Policies/أدوار صحيحة بعد تنفيذ P2؛ المساعد ليس حماية تطبيقية. PostgreSQL لم يُشغّل وبقي مؤجلًا إلى P8-T08. لا عائق متبقٍ ضمن P1-T06. **التوقف بعد P1-T06؛ المهمة التالية P1-T07 ولم تبدأ.**
+
+### دليل P1-T07 — سجل النشاط الآمن والمعزول (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** لم يبدأ P2-T01 أو أي عمل من Phase 2، ولم تُضف واجهة لسجل النشاط.
+
+**Schema والنموذج:** migration إضافية تنشئ `activity_logs` مع `company_id`، فاعل nullable مقيد بالشركة، action، polymorphic subject، JSON properties متوافق مع MariaDB/PostgreSQL، IP وtimestamps، مع فهارس الشركة/الإجراء/الفاعل/الموضوع. `ActivityLog` يستخدم `BelongsToCompany` وعلاقاته actor/subject/company، ويحظر update/delete العادي والهادئ وعمليات Builder الجماعية؛ هذا ضمان تطبيق Eloquent وليس منع SQL مباشر أو DBA.
+
+**الخدمة والحماية:** `RecordActivity::record(action, subject, properties)` يستمد الشركة من `CurrentCompany` والفاعل من Auth فقط، ويرفض actor أو subject عابر الشركة ولا يقبل company_id/actor من المستدعي. properties allow-listed من Action المستدعية وليست Request dump، ثم تُنقّح recursively لمفاتيح password/token/session/cookie/Authorization/CSRF/APP_KEY/DB/SMTP/API secrets مع اختبارات تمنع بقاء القيم الأصلية.
+
+**المعاملات والتكامل:** السجل يكتب داخل معاملة الأعمال نفسها. أضيف حدث `company.registered` فقط داخل معاملة P1-T03 بعد إنشاء التسلسلات؛ الفاعل nullable لأنه تسجيل نظامي قبل الدخول. اختبار failure في إنشاء ActivityLog يثبت rollback للشركة والمستخدم والتسلسلات والسجل، واختبار مستقل يثبت commit/rollback المتزامن لسجل وDocumentSequence.
+
+**العزل والاختبارات:** أعيد استعمال `InteractsWithTenantIsolation` لإثبات positive control ثم إخفاء سجل B عن A عبر Eloquent وRoute Model Binding. غطت الاختبارات actor النظامي، action/subject/properties، nested redaction، رفض cross-company، عدم وجود مدخلات caller-owned للفاعل/الشركة، 11 مسار mutation محظوراً، وtransaction semantics. تعديل teardown في اختبار التسجيل المتزامن يحذف فقط audit fixture للشركة ذات UUID الاختباري عبر DB raw قبل حذف الشركة؛ لا يغير حماية الإنتاج.
+
+**النتائج الفعلية النهائية — صفر فشل:**
+- `php scripts/inspect-database.php --testing`: **tawzee_test**، حساب **tawzee_test_app@127.0.0.1**، **MariaDB 10.4.32**؛ حواجز الهوية والصلاحيات مؤكدة.
+- migration `2026_09_20_000500_create_activity_logs_table`: **Ran** على `tawzee_test` عبر `mysql_testing` وعلى `tawzee_dev` عبر `mysql` بعد أن أكد `php scripts/inspect-database.php` اتصال MariaDB 10.4.32 وهوية `tawzee_dev` / `tawzee_dev_app@127.0.0.1`. أكد `php artisan migrate:status --database=mysql` أنها في batch 4، ونجح RegisterCompany rollback probe على التطوير دون ترك شركة أو مستخدم تجريبي دائم. لم تُستخدم migrate:fresh/reset/refresh أو db:wipe أو rollback أو truncate.
+- `php vendor/bin/phpunit -c phpunit.mysql.xml --filter ActivityLogTest --testdox`: **19 tests / 65 assertions**.
+- `composer test:mysql`: **210 tests / 1424 assertions**.
+- `composer test`: **28 passed / 68 assertions**.
+- `composer lint`: **Pint passed؛ PHP syntax 83 files passed**.
+
+**الملفات الجديدة:** migration activity_logs؛ `app/Modules/Access/Models/ActivityLog.php`؛ `app/Modules/Access/Database/ActivityLogBuilder.php`؛ `app/Modules/Access/Actions/RecordActivity.php`؛ `tests/Database/ActivityLogTest.php`.
+
+**الملفات المعدلة:** RegisterCompany Action لتكامل واحد داخل transaction؛ علاقات User/Company؛ teardown الاختبار المتزامن؛ ARCHITECTURE.md؛ TASKS.md. لا `.env` أو credentials أو UI أو routes إنتاج أو packages أو PostgreSQL معدلة. **Phase 1 Completed on MariaDB. التالي P2-T01 ولم يبدأ؛ PostgreSQL مؤجل إلى P8-T08.**

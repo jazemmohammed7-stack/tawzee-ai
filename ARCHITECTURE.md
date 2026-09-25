@@ -116,11 +116,22 @@ erDiagram
 | `collections` | `company_id`, `number`, `customer_id`, `amount_minor`, `method`, `received_on`, `reference`, `status` (`posted`/`voided`), `void_reason`, `idempotency_key`, `created_by` |
 | `collection_allocations` | `company_id`, `collection_id`, `invoice_id`, `amount_minor` |
 | `document_sequences` | `company_id`, `type`, `next_number`; فريد `(company_id, type)` |
-| `activity_logs` | `company_id`, `user_id`, `action`, `subject_type/id`, `properties` (jsonb), `ip_address` |
+| `activity_logs` | `company_id`, `user_id` (nullable system actor), `action`, `subject_type/id`, `properties` (portable JSON), `ip_address`, timestamps |
 
 **الرصيد السالب:** إعداد `allow_negative_stock` خاص بكل شركة فلا يُعبَّر عنه بقيد `CHECK` عام؛ لذلك **الـ Action هي الحارس الوحيد** (فحص بعد القفل داخل المعاملة) ويغطيها اختبار تزامن.
 
 **عرف التسمية:** الجداول جمع snake_case، الأعمدة المالية تنتهي بـ `_minor`، الأعمدة الكمية `quantity`.
+
+### سجل النشاط (P1-T07)
+
+- تملك وحدة `Access` نموذج `ActivityLog` وAction واحدة هي `RecordActivity::record(action, subject, properties)`؛ لا يختار المستدعي `company_id` أو الفاعل.
+- الشركة تؤخذ حصراً من `CurrentCompany`، والفاعل من حارس المصادقة الحالي أو يبقى `null` للأعمال الداخلية الموثوقة. يُرفض الفاعل أو الموضوع غير التابع للشركة الحالية.
+- النموذج يستخدم `BelongsToCompany`؛ القراءة وRoute Model Binding مقيدان بالشركة ويفشلان مغلقاً بلا سياق.
+- السجل append-only في طبقة Eloquent: يمنع الحفظ على صف موجود، والتحديث والحذف الهادئ والعادي، وعمليات Builder الجماعية. الحماية لا تدّعي منع SQL المباشر أو DBA.
+- `properties` ليست نسخة من Request. يمرّر Action بيانات أعمال محددة فقط ثم ينقّح مفاتيح الأسرار تكرارياً، ومنها كلمات المرور والتوكنات والجلسات والكوكيز وAuthorization وCSRF وAPP/DB/SMTP/API secrets.
+- يُستدعى التسجيل داخل معاملة Action التجارية نفسها؛ نجاح العملية والسجل أو rollback لكليهما. لا يستخدم best-effort ولا `afterCommit` لسجل النجاح.
+- أول تكامل حقيقي محدود هو `company.registered` داخل معاملة التسجيل، بفاعل نظامي nullable وخصائص مسموحة (`status`) فقط.
+- نوع JSON في migration هو Laravel `json` المتوافق مع MariaDB وPostgreSQL؛ التحقق الفعلي الحالي MariaDB، وPostgreSQL مؤجل إلى P8-T08.
 
 ---
 

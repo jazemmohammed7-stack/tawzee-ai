@@ -73,6 +73,8 @@ class RegistrationConcurrencyTest extends TestCase
                     $company->founder_user_id = null;
                     $company->save();
                     app(CurrentCompany::class)->run($company, fn () => $company->documentSequences()->delete());
+                    // Test-only teardown for this UUID-scoped fixture; production logs remain append-only.
+                    DB::table('activity_logs')->where('company_id', $company->id)->delete();
                     $company->users()->delete();
                     $company->delete();
                 });
