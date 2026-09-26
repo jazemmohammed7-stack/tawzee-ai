@@ -75,9 +75,9 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 | P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Done |
 | P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Done |
 | P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Done |
-| P2-T06 | اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة | لا مسار محمي بلا اختبار دور | Feature: مصفوفة دور × مسار | Not Started |
+| P2-T06 | اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة | لا مسار محمي بلا اختبار دور | Feature: مصفوفة دور × مسار | Done |
 
-**دليل P2-T05:** `CompanySettingsTest` **37 tests / 220 assertions**؛ `composer test:mysql` **305 / 1932**؛ فحص Chrome الفعلي على **1440/768/375** ناجح. التفاصيل في سجل الإغلاق أدناه.
+**دليل P2-T06:** `php vendor/bin/phpunit -c phpunit.mysql.xml --filter PermissionMatrixTest --testdox` → **296 tests / 2839 assertions / OK**؛ المرشحات الارتدادية المخصصة (`PermissionTeamsTest`, `CompanyRolesTest`, `AuthorizationPolicyTest`, `UserManagementTest`, `CompanySettingsTest`, `AuthenticationTest`, `TenantMiddlewareTest`) → **150 tests / 783 assertions / OK**؛ `composer test:mysql` → **601 tests / 4771 assertions / OK**؛ `composer test` → **28 tests / 68 assertions / OK**؛ `composer lint` → **Pint PASS / PHP syntax 117 files passed**.
 
 ## المرحلة 3 — Customers & Products
 

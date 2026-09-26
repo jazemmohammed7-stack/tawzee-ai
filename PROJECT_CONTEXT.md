@@ -446,6 +446,7 @@ P1-T06: Done
 P1-T07: Done
 
 Phase 2:
+Completed on MariaDB.
 
 P2-T01:
 Done
@@ -467,21 +468,24 @@ Production User Management + reusable production App Shell.
 
 P2-T05:
 Done
-Production Company Settings:
-- company name
-- allow_negative_stock
-- company.settings authorization
-- tenant isolation
-- transactional ActivityLog
-- reuse of P2-T04 App Shell
+Production Company Settings + company.settings authorization +
+tenant isolation + transactional ActivityLog.
 
 P2-T06:
+Done
+Comprehensive Role × Protected Surface permission matrix verification.
+
+Phase 3:
+
+P3-T00:
 CURRENT TASK
-Comprehensive permission matrix testing for existing routes.
+Money + Half-Up + quantity helpers.
 
-Do not start Phase 3 before P2-T06 is completed, reviewed,
-committed and pushed.
+P3-T01+:
+Not Started.
 
+Do not start P3-T01 before P3-T00 is completed,
+reviewed, committed and pushed.
 ==================================================
 P2-T04 — FINAL VERIFICATION
 ==================================================
@@ -734,107 +738,99 @@ CURRENT HANDOFF
 
 Last completed task:
 
-P2-T05 — Company Settings.
+P2-T06 — Comprehensive Permission Matrix Verification.
 
 Status:
 DONE
 
-Delivered:
+Phase 2:
+COMPLETED ON MARIADB.
 
-- Production route:
-  /company/settings
+Protected production surfaces currently verified:
 
-- Editable fields:
-  name
-  allow_negative_stock
+- /users
+  Permission: users.manage
 
-- Authorization:
-  company.settings
+- /company/settings
+  Permission: company.settings
 
-- Authorization enforced:
-  - page access
-  - Livewire save
-  - application Action
+Permission matrix:
 
-- Tenant source:
-  CurrentCompany only
+- Derived from Permission enum.
+- Derived from DefaultRole.
+- Tested across all six default roles:
+  owner
+  admin
+  sales
+  warehouse
+  accountant
+  viewer
 
-- Forged company identifiers rejected.
-- Stale/tampered Livewire state rejected.
+Verification included:
 
-Activity logging:
+- HTTP authorization.
+- Livewire server-side authorization.
+- Positive controls.
+- Tenant isolation.
+- Cross-company protection.
+- 403/404 semantics.
+- Forged company_id protection.
+- Stale Livewire state protection.
 
-Event:
-company.settings.updated
-
-Behavior:
-- records before/after only for changed fields
-- no log when nothing changed
-- company update + activity record use one transaction
-- rollback verified on failure
-
-UI:
-- Reuses P2-T04 App Shell
-- Reuses existing Design System
-- Updated company name reflected in Topbar/Sidebar/mobile drawer
-- Arabic RTL
-- Responsive
-
-Database/schema:
-- No migration
-- No schema change
-- No new package
-- PostgreSQL not tested
+No authorization gaps requiring application-code changes were found.
 
 Final verification:
 
-CompanySettingsTest:
-37 tests / 220 assertions
+PermissionMatrixTest:
+296 tests / 2839 assertions / OK
 
-Relevant regression:
-138 tests / 668 assertions
+Targeted regressions:
+150 tests / 783 assertions / OK
 
 composer test:mysql:
-305 tests / 1932 assertions
+601 tests / 4771 assertions / OK
 
 composer test:
-28 tests / 68 assertions
+28 tests / 68 assertions / OK
 
 composer lint:
 PASSED
-115 PHP files
+Pint PASS
+PHP syntax: 117 files passed
 
 git diff --check:
 PASSED
 
-npm build:
-PASSED
-58 modules
+Frontend:
+No changes in P2-T06.
+No npm build required.
 
-Browser verification:
-PASSED at 1440 / 768 / 375 px
-
-Verified:
-- RTL
-- navigation
-- keyboard interaction
-- validation
-- loading
-- toast
-- company-name refresh
-- persisted values after reload
-- no horizontal overflow
-- no reported JavaScript errors
+Database:
+No migration.
+No schema change.
+No new package.
+No PostgreSQL verification.
 
 Current task:
 
-P2-T06 — Comprehensive permission matrix tests for existing routes.
+P3-T00 — Money + Half-Up + quantity helpers.
 
-P2-T06 has NOT started.
+P3-T00 has NOT started.
+
+Purpose of P3-T00:
+
+Establish safe financial/quantity primitives before Customers,
+Products, Inventory and Sales.
+
+Important existing rule:
+
+- Monetary values use integer minor units.
+- Financial calculations must not use float.
+- PostgreSQL remains deferred to P8-T08.
 
 NEXT ACTION:
 
-1. Commit/push P2-T05.
+1. Commit and push P2-T06 / Phase 2 completion.
 2. Confirm clean Git state.
-3. Start P2-T06 only.
-4. Do not start Phase 3 before P2-T06 is reviewed and committed.
+3. Start P3-T00 only.
+4. Do not start P3-T01.
