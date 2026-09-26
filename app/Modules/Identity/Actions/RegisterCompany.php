@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity\Actions;
 
+use App\Modules\Access\Actions\InitializeCompanyRoles;
 use App\Modules\Access\Actions\RecordActivity;
 use App\Modules\Company\Models\Company;
 use App\Modules\Company\Models\DocumentSequence;
@@ -18,7 +19,10 @@ use RuntimeException;
 
 final class RegisterCompany
 {
-    public function __construct(private readonly RecordActivity $activity) {}
+    public function __construct(
+        private readonly RecordActivity $activity,
+        private readonly InitializeCompanyRoles $roles,
+    ) {}
 
     public function handle(array $input): Company
     {
@@ -78,6 +82,7 @@ final class RegisterCompany
                             throw new RuntimeException('Registration persistence was cancelled.');
                         }
                     }
+                    $this->roles->handle($company);
                     $this->activity->record('company.registered', $company, [
                         'status' => $company->status,
                     ]);

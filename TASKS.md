@@ -7,7 +7,7 @@
 | البند | القيمة |
 |---|---|
 | **المرحلة الحالية** | المرحلة 1 مكتملة على MariaDB؛ Phase 0 مكتملة على MariaDB |
-| **المهمة التالية** | `P2-T02` — Enum الصلاحيات وSeeder الأدوار الافتراضية؛ لم يبدأ |
+| **المهمة التالية** | `P2-T03` — Policies وأنماط `authorize()`؛ لم يبدأ |
 | **آخر تحديث** | 2026-09-26 — P1-T07: Done على MariaDB؛ Phase 2: Not Started |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
@@ -71,7 +71,7 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 | المعرف | المهمة | معيار القبول | الاختبارات | الحالة |
 |---|---|---|---|---|
 | P2-T01 | تقييم/تثبيت حزمة الصلاحيات مع Teams بحسب التوافق (أو بديل بسيط)، وتوثيق القرار | الحزمة تعمل بـ `company_id` كـ Team؛ القرار مسجل في ARCHITECTURE §10 | Feature: دور في شركة لا يؤثر في أخرى | Done |
-| P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Not Started |
+| P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Done |
 | P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Not Started |
 | P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Not Started |
 | P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Not Started |
@@ -427,3 +427,19 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 **قاعدة البيانات:** الترحيل `2026_09_25_235738_create_permission_tables` أصبح Ran على `tawzee_test` أولًا ثم `tawzee_dev` بعد تحقق الهوية المستقل لكل اتصال. جداول الربط وroles تحمل `company_id` مع مفاتيح خارجية إلى companies. لم تستخدم أوامر fresh/reset/refresh/wipe/rollback/truncate.
 
 **الاختبارات:** `PermissionTeamsTest` يغطي القراءة الإيجابية داخل الشركة، منع رؤية دور شركة أخرى، نجاح الإسناد الصحيح، رفض الإسناد المتقاطع في الاتجاهين، منع override لمعرف Team، واستعادة السياق بعد الاستثناء. `composer test:mysql`: **213 tests / 1434 assertions**. `composer test`: **28 tests / 68 assertions**. P2-T02 بقيت Not Started.
+
+### إغلاق P2-T02 — مصفوفة الصلاحيات والأدوار الافتراضية (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** أضيف `Access\Enums\Permission` بالقيم التسع عشرة في مصفوفة PROJECT فقط، و`DefaultRole` للأدوار الستة حرفيًا: owner, admin, sales, warehouse, accountant, viewer. يطبق `InitializeCompanyRoles` المصفوفة كاملة عبر Spatie، وينشئ Role داخل `company_id` الحالي، ويزامن الصلاحيات بحيث تزال أي صلاحية غير مطلوبة.
+
+**التهيئة والمؤسس:** الـAction يعمل داخل `CurrentCompany::run` ومعاملة قاعدة بيانات، وهو idempotent. يسند owner حصريًا إلى `founder_user_id` بعد التحقق من انتمائه للشركة. دُمج داخل معاملة `RegisterCompany` بعد التسلسلات وقبل سجل `company.registered`؛ أي فشل في إنشاء الأدوار يعيد الشركة والمستخدم والتسلسلات والصلاحيات والأدوار والإسنادات والسجل معًا. تبقى الشركة `pending_setup`. الشركات القديمة تُهيأ باستدعاء الـAction صراحة؛ إن غاب founder تُنشأ الأدوار دون تخمين مستخدم أو إسناد owner، ولا يوجد bulk backfill.
+
+**العزل والاختبارات:** اختبار Data-driven مستقل يثبت كل صلاحية متوقعة وغير متوقعة لكل Role، 19 Permission بالضبط، ستة Roles بالضبط، تكرار التهيئة بلا تكرار، شركتين بنفس الأسماء دون تسرب، owner للمؤسس، شركة قديمة، وrollback عند الفشل. لم يضف ActivityLog جديد لأن الحدث التشغيلي المطلوب ما زال `company.registered` داخل المعاملة ولا حاجة إلى Permission dump.
+
+- `php vendor/bin/phpunit -c phpunit.mysql.xml --filter CompanyRolesTest --testdox`: **4 tests / 31 assertions**.
+- regressions للتسجيل وP2-T01 وسجل النشاط: **62 tests / 204 assertions**.
+- `composer test:mysql`: **217 tests / 1465 assertions**.
+- `composer test`: **28 tests / 68 assertions**.
+- `composer lint`: **Pint passed؛ PHP syntax 92 files passed**.
+
+لا migration جديدة، ولا PostgreSQL، ولا UI، ولا Policies، ولا `Gate::before`. **المهمة التالية P2-T03 ولم تبدأ.**
