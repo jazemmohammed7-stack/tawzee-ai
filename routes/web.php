@@ -14,3 +14,6 @@ Route::view('/forgot-password', 'auth.forgot-password')->name('password.request'
 Route::get('/reset-password/{token}', fn (string $token) => view('auth.reset-password', compact('token')))->name('password.reset')->middleware(['guest', 'cache.headers:no_store;private']);
 Route::get('/pending-setup', [SessionController::class, 'pending'])->middleware(['auth', 'tenant', 'cache.headers:no_store;private'])->name('setup.pending');
 Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth')->name('logout');
+
+// Administrative setup is available before commercial readiness; no business modules are opened.
+Route::view('/users', 'identity.index')->middleware(['auth', 'tenant', 'can:viewAny,App\\Models\\User', 'cache.headers:no_store;private'])->name('users.index');

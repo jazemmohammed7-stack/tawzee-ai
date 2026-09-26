@@ -6,9 +6,9 @@
 
 | البند | القيمة |
 |---|---|
-| **المرحلة الحالية** | المرحلة 1 مكتملة على MariaDB؛ Phase 0 مكتملة على MariaDB |
-| **المهمة التالية** | `P2-T04` — إدارة المستخدمين؛ لم يبدأ |
-| **آخر تحديث** | 2026-09-26 — P2-T03: Done على MariaDB |
+| **المرحلة الحالية** | المرحلة 2 — P2-T01 إلى P2-T04 مكتملة على MariaDB؛ المرحلتان 0 و1 مكتملتان |
+| **المهمة التالية** | `P2-T05` — إعدادات الشركة؛ لم يبدأ |
+| **آخر تحديث** | 2026-09-26 — P2-T04: Done على MariaDB |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
 **الدليل:** عند `Done` تُضاف سطر «دليل» أسفل جدول المرحلة: الأمر الفعلي ونتيجته.
@@ -73,7 +73,7 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 | P2-T01 | تقييم/تثبيت حزمة الصلاحيات مع Teams بحسب التوافق (أو بديل بسيط)، وتوثيق القرار | الحزمة تعمل بـ `company_id` كـ Team؛ القرار مسجل في ARCHITECTURE §10 | Feature: دور في شركة لا يؤثر في أخرى | Done |
 | P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Done |
 | P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Done |
-| P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Not Started |
+| P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Done |
 | P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Not Started |
 | P2-T06 | اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة | لا مسار محمي بلا اختبار دور | Feature: مصفوفة دور × مسار | Not Started |
 
@@ -459,3 +459,45 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 - `composer lint`: **Pint passed؛ PHP syntax 98 files passed**.
 
 لا migration، ولا تغيير schema أو بيانات، ولا PostgreSQL، ولا route أو UI إنتاج، ولم تبدأ إدارة المستخدمين. **المهمة التالية P2-T04 ولم تبدأ.**
+
+### إغلاق P2-T04 — إدارة المستخدمين وواجهة التطبيق الإنتاجية (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** النطاق إدارة المستخدمين فقط مع App Shell وأساس واجهة قابل لإعادة الاستخدام؛ P2-T05 لم يبدأ. لا Company Settings أو وحدات تجارية أو روابط مستقبلية أو تغيير كلمات مرور/دعوات/حذف مستخدمين.
+
+**الفحص الأولي:** شجرة العمل نظيفة؛ HEAD هو `ed4ed30` (P2-T03). قرئت المراجع والمهارتان والكود المطلوب. `composer.json` يطلب `~4.4.5` وcomposer.lock و`composer show livewire/livewire --format=json` يؤكدان **v4.4.5** المثبت. لم تتغير ملفات الحزم. MariaDB كانت متوقفة؛ فشل الاتصال الأول، ثم شغلت الخدمة المحلية القائمة. فحص الهوية بعد التشغيل: `tawzee_test` / `tawzee_test_app@127.0.0.1`، 17 جدولًا. baseline المجموعة القائمة: **222 tests / 1489 assertions**. `migrate:status --env=testing --database=mysql_testing` يثبت التسعة Ran دون تشغيل أي migration.
+
+**ما نُفذ:**
+- `/users` محمية ومقيدة بالشركة، قائمة بالعربية، بحث اسم/بريد، فلاتر دور وحالة، pagination خادمية 10/صفحة، إحصاءات المستخدمين فقط. Desktop table وMobile/Tablet cards، شارات الدور والحالة والمؤسس، empty/no-results منفصلتان. حالة «لا مستخدمين» دفاعية؛ وجود مستخدم مخوّل يجعلها غير قابلة للوصول في البيانات الطبيعية الحالية، وحالة no-results اختبرت فعليًا.
+- Create/Edit في modal: الاسم والبريد والدور؛ كلمة المرور وتأكيدها عند الإنشاء فقط وفق السياسة القائمة. البريد مطبع وفريد عالميًا، والرسائل عربية. تفعيل/تعطيل بـis_active وتأكيد يوضح الأثر، دون حذف. النجاح يمسح النموذج وكلمة المرور؛ الخطأ يبقي المدخلات.
+- App Shell جديد بSidebar وTopbar ودرج جوال ومعلومات الشركة والحساب، وخط محلي. أساس UI عملي: button/field/badge/modal/toast مع card/input/select/alert والحالات في CSS. Native dialog وEscape وfocus trap/restoration وfocus-visible؛ الحالات نصية لا ألوان فقط.
+- UserPolicy مع Permission::UsersManage، وإعادة authorization/tenant/actor/target داخل Actions. قفل الشركة والهدف ومعاملة واحدة تضمن عدم الحالة الجزئية. User يبقى غير scoped للمصادقة، وجميع عمليات الإدارة عبر CompanyUsers المقيدة. foreign target => 404؛ permission denial => 403؛ foreign role => validation عربية.
+- Founder/Owner محميان من تعطيل/تغيير دور الآخرين، مع السماح بالاسم/البريد وبإعادة التفعيل. التغيير الذاتي مسموح وفق عبارة «بواسطة غيره» مع التنبيه والتحويل عند فقد الوصول؛ لا قاعدة آخر مالك مضافة. مرجع المؤسس لا يمنح صلاحية. المصفوفة الدقيقة موثقة في ARCHITECTURE §18.
+- `user.role_changed` فقط وفق FR-19 لإسناد/تغيير الدور، داخل transaction وبمعرفات أدوار فقط. فشل ActivityLog أو إلغاء حفظ User يسبب rollback. لا أسرار أو بيانات هوية في properties/رسالة الخطأ العامة.
+- دراسة Odoo/Zoho الرسمية أفادت في فصل بيانات الحساب والدور، وتنظيم القائمة والفلاتر، والتعديل المركز والتعطيل القابل للعكس. التكييف مستقل عربي RTL؛ المراجع والتفاصيل في ARCHITECTURE §18.
+
+**التحقق النهائي — صفر فشل:**
+
+| الأمر | النتيجة |
+|---|---|
+| `php vendor/bin/phpunit -c phpunit.mysql.xml --filter UserManagementTest --testdox` | **46 tests / 223 assertions** |
+| `php vendor/bin/phpunit -c phpunit.mysql.xml --filter 'PermissionTeamsTest\|CompanyRolesTest\|AuthorizationPolicyTest\|Authentication\|TenantMiddleware'` | **74 tests / 389 assertions** |
+| `composer test:mysql` | **268 tests / 1712 assertions** |
+| `composer test` | **28 passed / 68 assertions** |
+| `composer lint` | **Pint passed؛ PHP syntax 110 files passed** |
+| `npm.cmd run build` | **Vite 7.3.6؛ 58 modules؛ نجاح** |
+| `git diff --check` | **نجاح**؛ تحذيرات تحويل CRLF إلى LF فقط |
+
+**التغطية:** الأدوار الستة وسلوك 403، positive controls للشركتين، قائمة/بحث/فلاتر/pagination معزولة، منع target/role أجنبيين، company_id المزور في query/header/Livewire body، Locked IDs، snapshot قديم بعد تبديل الهوية أو نقل الهوية نفسها إلى شركة أخرى، إبطال صلاحية الفاعل المخزنة، تغيير دور الهدف بعد التأكيد، غياب السياق، منع المعطل من الدخول وجلساته القديمة، الحماية الذاتية/الغيرية للمؤسس ومالك غير المؤسس، update validation وكلمة المرور غير القابلة للتعديل، rollback، أخطاء عامة دون exception text، escaping وquery count لا ينمو مع الصفوف.
+
+**فحص المتصفح الفعلي:** `node scripts/verify-user-management.mjs` عبر Chrome headless/CDP المحلي، بلا npm packages إضافية، وخادم Laravel testing على `127.0.0.1:8016` باستخدام mysql_testing. احتاج تشغيل Chrome خارج قيود البيئة بعد تعثر الاتصال به داخل العزل. Fixtures تستخدم UUID وحواجز DatabaseSafety الثلاثة؛ تنظف سجلات شركتها فقط داخل transaction. لم تُستخدم أوامر wipe/fresh/reset/refresh/rollback/truncate/drop ولا اختبارات على قاعدة التطوير.
+- عروض **1440 / 768 / 375**: lang=ar وRTL، خط محلي، لا horizontal overflow، جدول Desktop وبطاقات Tablet/Mobile، Sidebar/Drawer، labels، Tab focus trap وfocus-visible وEscape وإعادة التركيز، validation عربية.
+- تدفق متصفح فعلي: دخول → رابط إدارة المستخدمين → بحث/فلاتر/صفحات/no-results → إنشاء → تعديل → تأكيد تعطيل → إعادة تفعيل. فحص loading مع latency اصطناعية يثبت تعطيل الإرسال، وsuccess toast ظاهر. **لا أخطاء JavaScript/console**. error toast اختبر على Livewire/PHPUnit بفشل حقن حقيقي، ولم يفرض فشل قاعدة بيانات من المتصفح.
+- راجعت صور Desktop وMobile وvalidation بصريًا. النتائج والصور في `storage/app/private/user-management-browser/` غير المتتبع: `results.json`, `users-1440.png`, `users-768.png`, `users-375.png`, `validation-*.png`, `navigation-*.png`, `empty-375.png`, `edit-375.png`, `confirm-disable-375.png`, `loading-375.png`.
+- كشف المتصفح مسح error bag أثناء render؛ فصل Validator الفلاتر عن Livewire validation وأضاف اختبار HTTP يثبت HTML الأخطاء. كذلك أصلح حفظ زر الفتح قبل تعطيله لضمان استعادة التركيز. أعيد الفحص بنجاح ثم جميع أوامر التحقق أعلاه. لا ادعاء باختبار متصفحات أخرى أو PostgreSQL.
+
+**الملفات الجديدة:**
+- `app/Modules/Identity/Actions/{CreateUser,UpdateUser,ChangeUserStatus}.php`، `Policies/UserPolicy.php`، `Livewire/Users.php`، `Support/{CompanyUsers,UserInput,UserProtection,UserRoleAssignment}.php`.
+- `lang/ar/users.php`، `resources/views/layouts/workspace.blade.php`، `components/ui/{button,field,badge,modal,toasts}.blade.php`، `components/workspace/navigation.blade.php`، `identity/{index,users,user-identity,user-actions,pagination}.blade.php`.
+- `tests/Database/UserManagementTest.php`، `tests/Support/user-management-browser-fixture.php`، `scripts/verify-user-management.mjs`.
+
+**الملفات المعدلة:** `app/Providers/AppServiceProvider.php` (تسجيل Policy)، `routes/web.php`، `resources/css/app.css`، `resources/views/auth/pending.blade.php` (رابط مخوّل)، `ARCHITECTURE.md`، `TASKS.md`. لا تعديل لأي اختبار سابق، ولا `.env` أو Schema أو packages. لا commit/push أُجري. **المهمة التالية P2-T05 — إعدادات الشركة، لم تبدأ.**

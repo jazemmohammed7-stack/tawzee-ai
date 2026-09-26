@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Http\Middleware\EnsureCompanyReady;
 use App\Http\Middleware\RequireCompany;
+use App\Models\User;
 use App\Modules\Access\Policies\DocumentSequencePolicy;
 use App\Modules\Company\Models\DocumentSequence;
+use App\Modules\Identity\Policies\UserPolicy;
 use App\Support\Tenancy\CurrentCompany;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Session\Middleware\AuthenticateSession;
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Manual because the policy and model live in separate bounded modules.
         Gate::policy(DocumentSequence::class, DocumentSequencePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
 
         Livewire::addPersistentMiddleware([
             RequireCompany::class,
