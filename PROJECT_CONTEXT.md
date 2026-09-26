@@ -427,7 +427,6 @@ Founder/Owner protection:
 No user deletion was implemented.
 
 No custom Role editor or Permission editor was implemented.
-
 ==================================================
 PROJECT STATUS
 ==================================================
@@ -450,40 +449,37 @@ Phase 2:
 
 P2-T01:
 Done
-
-Implemented:
 Spatie roles/permissions + Teams/company isolation.
 
 P2-T02:
 Done
-
-Implemented:
 Permission enum + six default roles + exact permission matrix +
 InitializeCompanyRoles + Founder -> Owner assignment.
 
 P2-T03:
 Done
-
-Implemented:
 Policies + server-side authorize() pattern +
 HTTP/Livewire verification.
 
 P2-T04:
 Done
-
-Implemented:
-Production User Management +
-first reusable production App Shell/design foundation.
+Production User Management + reusable production App Shell.
 
 P2-T05:
-CURRENT TASK
-
-Company Settings.
+Done
+Production Company Settings:
+- company name
+- allow_negative_stock
+- company.settings authorization
+- tenant isolation
+- transactional ActivityLog
+- reuse of P2-T04 App Shell
 
 P2-T06:
-Not Started.
+CURRENT TASK
+Comprehensive permission matrix testing for existing routes.
 
-Do not start P2-T06 before P2-T05 is completed, reviewed,
+Do not start Phase 3 before P2-T06 is completed, reviewed,
 committed and pushed.
 
 ==================================================
@@ -732,75 +728,113 @@ Do not permanently retain:
 - Old prompts for completed tasks
 - Old test counts when replaced by a newer authoritative verification
 - Conversation filler
-
 ==================================================
 CURRENT HANDOFF
 ==================================================
 
 Last completed task:
 
-P2-T04 — User Management + first production App Shell.
+P2-T05 — Company Settings.
 
-P2-T04 status:
-
+Status:
 DONE
 
 Delivered:
 
-- Production /users page
-- User listing for CurrentCompany
-- Search/filter/pagination
-- Create user
-- Edit user
-- Role assignment
-- Activate/deactivate
-- Founder/Owner protection
-- Tenant/IDOR protection
-- Server-side authorization
-- First reusable production App Shell
-- Sidebar/Topbar
-- Mobile navigation
-- Reusable UI/design patterns
-- Arabic RTL responsive interface
-- Browser verification
+- Production route:
+  /company/settings
 
-No:
+- Editable fields:
+  name
+  allow_negative_stock
 
-- new package
-- migration
-- schema change
-- PostgreSQL work
+- Authorization:
+  company.settings
 
-P2-T04 has been reviewed in ChatGPT.
+- Authorization enforced:
+  - page access
+  - Livewire save
+  - application Action
 
-Before starting P2-T05:
+- Tenant source:
+  CurrentCompany only
 
-P2-T04 should be committed and pushed if that has not yet been done.
+- Forged company identifiers rejected.
+- Stale/tampered Livewire state rejected.
+
+Activity logging:
+
+Event:
+company.settings.updated
+
+Behavior:
+- records before/after only for changed fields
+- no log when nothing changed
+- company update + activity record use one transaction
+- rollback verified on failure
+
+UI:
+- Reuses P2-T04 App Shell
+- Reuses existing Design System
+- Updated company name reflected in Topbar/Sidebar/mobile drawer
+- Arabic RTL
+- Responsive
+
+Database/schema:
+- No migration
+- No schema change
+- No new package
+- PostgreSQL not tested
+
+Final verification:
+
+CompanySettingsTest:
+37 tests / 220 assertions
+
+Relevant regression:
+138 tests / 668 assertions
+
+composer test:mysql:
+305 tests / 1932 assertions
+
+composer test:
+28 tests / 68 assertions
+
+composer lint:
+PASSED
+115 PHP files
+
+git diff --check:
+PASSED
+
+npm build:
+PASSED
+58 modules
+
+Browser verification:
+PASSED at 1440 / 768 / 375 px
+
+Verified:
+- RTL
+- navigation
+- keyboard interaction
+- validation
+- loading
+- toast
+- company-name refresh
+- persisted values after reload
+- no horizontal overflow
+- no reported JavaScript errors
 
 Current task:
 
-P2-T05 — Company Settings.
+P2-T06 — Comprehensive permission matrix tests for existing routes.
 
-P2-T05 has NOT started.
-
-Expected P2-T05 high-level scope:
-
-- Company settings production page
-- Company name
-- allow_negative_stock
-- company.settings authorization
-- ActivityLog integration
-- Tenant isolation
-- Reuse P2-T04 App Shell/design system
-
-Open application issues:
-
-None confirmed at this handoff.
+P2-T06 has NOT started.
 
 NEXT ACTION:
 
-1. Ensure P2-T04 changes are committed/pushed.
-2. Confirm clean/expected Git state.
-3. Read TASKS.md / PROJECT.md exact P2-T05 requirements.
-4. Prepare and execute P2-T05 only.
-5. Do not start P2-T06.
+1. Commit/push P2-T05.
+2. Confirm clean Git state.
+3. Start P2-T06 only.
+4. Do not start Phase 3 before P2-T06 is reviewed and committed.

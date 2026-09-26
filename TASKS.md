@@ -6,9 +6,9 @@
 
 | البند | القيمة |
 |---|---|
-| **المرحلة الحالية** | المرحلة 2 — P2-T01 إلى P2-T04 مكتملة على MariaDB؛ المرحلتان 0 و1 مكتملتان |
-| **المهمة التالية** | `P2-T05` — إعدادات الشركة؛ لم يبدأ |
-| **آخر تحديث** | 2026-09-26 — P2-T04: Done على MariaDB |
+| **المرحلة الحالية** | المرحلة 2 — P2-T01 إلى P2-T05 مكتملة على MariaDB؛ المرحلتان 0 و1 مكتملتان |
+| **المهمة التالية** | `P2-T06` — اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة؛ لم يبدأ |
+| **آخر تحديث** | 2026-09-26 — P2-T05: Done على MariaDB |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
 **الدليل:** عند `Done` تُضاف سطر «دليل» أسفل جدول المرحلة: الأمر الفعلي ونتيجته.
@@ -74,8 +74,10 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 | P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Done |
 | P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Done |
 | P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Done |
-| P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Not Started |
+| P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Done |
 | P2-T06 | اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة | لا مسار محمي بلا اختبار دور | Feature: مصفوفة دور × مسار | Not Started |
+
+**دليل P2-T05:** `CompanySettingsTest` **37 tests / 220 assertions**؛ `composer test:mysql` **305 / 1932**؛ فحص Chrome الفعلي على **1440/768/375** ناجح. التفاصيل في سجل الإغلاق أدناه.
 
 ## المرحلة 3 — Customers & Products
 
@@ -501,3 +503,38 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 - `tests/Database/UserManagementTest.php`، `tests/Support/user-management-browser-fixture.php`، `scripts/verify-user-management.mjs`.
 
 **الملفات المعدلة:** `app/Providers/AppServiceProvider.php` (تسجيل Policy)، `routes/web.php`، `resources/css/app.css`، `resources/views/auth/pending.blade.php` (رابط مخوّل)، `ARCHITECTURE.md`، `TASKS.md`. لا تعديل لأي اختبار سابق، ولا `.env` أو Schema أو packages. لا commit/push أُجري. **المهمة التالية P2-T05 — إعدادات الشركة، لم تبدأ.**
+
+### إغلاق P2-T05 — إعدادات الشركة وسجل التغييرات (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** صفحة `/company/settings` عربية RTL داخل App Shell القائمة؛ تعديل `name` و`allow_negative_stock` فقط. P2-T06 لم تبدأ، ولا منطق مخزون أو إعدادات إضافية.
+
+**الفحص الأولي وقاعدة البيانات:** شجرة العمل كانت نظيفة، HEAD `be82f58` (P2-T04). قُرئت المراجع الستة والمهارتان المحليتان والكود المعتمد. baseline `composer test:mysql`: **268 tests / 1712 assertions**. `php scripts/inspect-database.php --testing` أثبت قاعدة `tawzee_test` وحساب `tawzee_test_app@127.0.0.1` و17 جدولًا. فحص `companies` الفعلي عبر `php -d extension=intl artisan db:table companies --database=mysql_testing --env=testing` أثبت InnoDB و9 أعمدة، منها `name varchar(255)` و`allow_negative_stock tinyint(1)` بقيمة افتراضية 0، مع boolean cast موجود بالنموذج. المحاولة الأولى لأداة عرض الجدول تعثرت لغياب intl المحمّل؛ نجحت بتحميل الامتداد للأمر فقط دون تعديل الإعدادات. **لا migration ولا تغيير schema أو packages أو .env**، ولا أوامر قواعد بيانات مدمرة أو PostgreSQL.
+
+**التنفيذ والأمان:**
+- `CompanyPolicy` تفوّض بصلاحية `company.settings` وفق TenantPolicy، وتعيد قراءة المستخدم النشط وصلاحياته داخل الشركة. حماية فتح الصفحة وhydrate والحفظ والـAction، و403 لغير المخوّل؛ لا role-name checks أو Gate::before. الشركة pending_setup تبقى كما هي.
+- `UpdateCompanySettings` تستمد الشركة حصريًا من CurrentCompany ولا تقبل معرفًا. القفل والتفويض والتحقق والتحديث وRecordActivity داخل transaction واحدة. الاسم trim ثم required/string/max255، والمفتاح boolean قبل التحويل. الحقول الزائدة مرفوضة. سجل `company.settings.updated` يحوي `changes` قبل/بعد للحقول المتغيرة فقط، مع الشركة والفاعل والموضوع الصحيحين، دون بيانات طلب أو أسرار.
+- الحفظ المطابق لا يغير updated_at ولا ينشئ نشاطًا. إلغاء حفظ الشركة/السجل أو الاستثناء قبل/بعد إنشاء السجل يثبت rollback الكامل. Livewire يعرض خطأ عامًا ويحفظ المدخلات دون كشف الاستثناء.
+- snapshot مربوط ببصمة مقفلة للفاعل والشركة؛ لا شركة مأخوذة من URL/query/body/header/cookie/public state. الاختبارات تثبت A/B وpositive controls ورفض حقن company_id وإعادة تشغيل snapshot بعد تغيير الهوية/الشركة أو سحب الصلاحية، ورفض العبث بالخصائص المقفلة وغياب السياق.
+- نفس Sidebar/Topbar/Drawer وCards/Field/Button/Toasts والخط المحلي، مع رابط إعدادات مخوّل وحالة نشطة صحيحة. تحديث اسم الشركة في مواضع الـShell الثلاثة بعد الحفظ وظهوره في التحميل اللاحق. Toggle باسم وحالة قابلين للوصول وTab/Space/focus-visible ووصف الأثر؛ تعطيل الحفظ عند عدم التغيير ورسالة تغييرات غير محفوظة وتحميل وأخطاء عربية.
+
+**التحقق الفعلي — صفر فشل في النتائج النهائية:**
+
+| الأمر | النتيجة |
+|---|---|
+| `php vendor/bin/phpunit -c phpunit.mysql.xml --filter CompanySettingsTest --testdox` | **37 tests / 220 assertions**؛ أعيد الاختبار المركّز بعد إصلاح UI بنفس النتيجة |
+| `php vendor/bin/phpunit -c phpunit.mysql.xml --filter 'UserManagementTest\|AuthorizationPolicyTest\|PermissionTeamsTest\|CompanyRolesTest\|ActivityLogTest\|TenantMiddleware\|Authentication'` | **138 tests / 668 assertions** |
+| `composer test:mysql` | **305 tests / 1932 assertions** |
+| `composer test` | **28 passed / 68 assertions** |
+| `composer lint` | **Pint passed؛ PHP syntax 115 files passed** |
+| `npm.cmd run build` | **Vite 7.3.6؛ 58 modules؛ نجاح**؛ أعيد بعد إصلاح UI |
+| `node --check scripts/verify-company-settings.mjs` | **نجاح** |
+| `git diff --check` | **نجاح**؛ تحذيرات CRLF/LF فقط |
+
+**المتصفح:** `node scripts/verify-company-settings.mjs` على Chrome headless/CDP المحلي وخادم Laravel testing `127.0.0.1:8017` وmysql_testing، بلا حزم إضافية. يعيد استخدام fixture UUID المحمية وحواجز DatabaseSafety القائمة وينظف شركة الاختبار وحدها. شُغّل Chrome بصلاحية خارج sandbox اللازمة محليًا.
+- **1440/768/375:** العربية وRTL والخط المحلي، لا تجاوز أفقي، روابط التنقل والـShell، Drawer وEscape واستعادة التركيز، labels وTab/Space وحالة toggle وfocus-visible، validation عربية، تعطيل أثناء loading مع latency اصطناعية، toast نجاح، تحديث الاسم في Topbar/Sidebar/Drawer، وثبات الاسم والمفتاح بعد إعادة تحميل فعلية. **browserErrors: []**.
+- كشف التشغيل الأول تداخل إعادة تفعيل زر submit في Livewire مع تعطيل Alpine عند عدم التغيير. أصلح بتعطيل fieldset مستقل، ثم نجح التدفق كاملًا بكل الأحجام. راجعت صور desktop/mobile وvalidation بصريًا. فشل الحفظ وerror toast مثبتان بحقن الفشل في اختبارات Livewire؛ لم نفرض فشل DB في المتصفح.
+- الأدلة المحلية غير المتتبعة: `storage/app/private/company-settings-browser/results.json` و`settings-*.png` و`validation-*.png` و`loading-*.png` و`saved-*.png` و`navigation-768.png` و`navigation-375.png`. لا ادعاء بفحص متصفحات أخرى.
+
+**الجديد:** `app/Modules/Company/Actions/UpdateCompanySettings.php`، `Policies/CompanyPolicy.php`، `Livewire/Settings.php`؛ `lang/ar/company_settings.php`؛ `resources/views/company/{settings-page,settings}.blade.php`؛ `tests/Database/CompanySettingsTest.php`؛ `scripts/verify-company-settings.mjs`.
+
+**المعدل:** `app/Providers/AppServiceProvider.php`، `routes/web.php`، `resources/views/layouts/workspace.blade.php`، `resources/views/components/workspace/navigation.blade.php`، `ARCHITECTURE.md` (§19 لقرارات جذر الشركة والمعاملة وتحديث الاسم)، `TASKS.md`. لم تتغير الاختبارات السابقة أو `PROJECT_CONTEXT.md`. لا commit/push. **التالي فقط: P2-T06 — اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة؛ لم يبدأ.**

@@ -17,3 +17,4 @@ Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth'
 
 // Administrative setup is available before commercial readiness; no business modules are opened.
 Route::view('/users', 'identity.index')->middleware(['auth', 'tenant', 'can:viewAny,App\\Models\\User', 'cache.headers:no_store;private'])->name('users.index');
+Route::view('/company/settings', 'company.settings-page')->middleware(['auth', 'tenant', 'can:viewSettings,App\\Modules\\Company\\Models\\Company', 'cache.headers:no_store;private'])->name('company.settings');
