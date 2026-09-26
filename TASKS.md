@@ -7,7 +7,7 @@
 | البند | القيمة |
 |---|---|
 | **المرحلة الحالية** | المرحلة 1 مكتملة على MariaDB؛ Phase 0 مكتملة على MariaDB |
-| **المهمة التالية** | `P2-T01` — تقييم/تثبيت الأدوار والصلاحيات؛ لم يبدأ |
+| **المهمة التالية** | `P2-T02` — Enum الصلاحيات وSeeder الأدوار الافتراضية؛ لم يبدأ |
 | **آخر تحديث** | 2026-09-26 — P1-T07: Done على MariaDB؛ Phase 2: Not Started |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
@@ -70,7 +70,7 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 
 | المعرف | المهمة | معيار القبول | الاختبارات | الحالة |
 |---|---|---|---|---|
-| P2-T01 | تقييم/تثبيت حزمة الصلاحيات مع Teams بحسب التوافق (أو بديل بسيط)، وتوثيق القرار | الحزمة تعمل بـ `company_id` كـ Team؛ القرار مسجل في ARCHITECTURE §10 | Feature: دور في شركة لا يؤثر في أخرى | Not Started |
+| P2-T01 | تقييم/تثبيت حزمة الصلاحيات مع Teams بحسب التوافق (أو بديل بسيط)، وتوثيق القرار | الحزمة تعمل بـ `company_id` كـ Team؛ القرار مسجل في ARCHITECTURE §10 | Feature: دور في شركة لا يؤثر في أخرى | Done |
 | P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Not Started |
 | P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Not Started |
 | P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Not Started |
@@ -419,3 +419,11 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 **الملفات الجديدة:** migration activity_logs؛ `app/Modules/Access/Models/ActivityLog.php`؛ `app/Modules/Access/Database/ActivityLogBuilder.php`؛ `app/Modules/Access/Actions/RecordActivity.php`؛ `tests/Database/ActivityLogTest.php`.
 
 **الملفات المعدلة:** RegisterCompany Action لتكامل واحد داخل transaction؛ علاقات User/Company؛ teardown الاختبار المتزامن؛ ARCHITECTURE.md؛ TASKS.md. لا `.env` أو credentials أو UI أو routes إنتاج أو packages أو PostgreSQL معدلة. **Phase 1 Completed on MariaDB. التالي P2-T01 ولم يبدأ؛ PostgreSQL مؤجل إلى P8-T08.**
+
+### إغلاق P2-T01 — حزمة الأدوار والصلاحيات المعزولة (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** ثُبتت `spatie/laravel-permission` 6.25.0 فقط دون ترقية Laravel أو PHP أو أي حزمة رئيسية. فُعّلت Teams باستخدام `company_id` وربط Team Resolver بـ `CurrentCompany` الموثوق، مع Role خاضع لـ `CompanyScope` وحراسة تمنع إسناد مستخدم أو دور عبر شركة أخرى. لم تُنشأ أدوار افتراضية أو Enum أو Seeder، ولم يبدأ P2-T02.
+
+**قاعدة البيانات:** الترحيل `2026_09_25_235738_create_permission_tables` أصبح Ran على `tawzee_test` أولًا ثم `tawzee_dev` بعد تحقق الهوية المستقل لكل اتصال. جداول الربط وroles تحمل `company_id` مع مفاتيح خارجية إلى companies. لم تستخدم أوامر fresh/reset/refresh/wipe/rollback/truncate.
+
+**الاختبارات:** `PermissionTeamsTest` يغطي القراءة الإيجابية داخل الشركة، منع رؤية دور شركة أخرى، نجاح الإسناد الصحيح، رفض الإسناد المتقاطع في الاتجاهين، منع override لمعرف Team، واستعادة السياق بعد الاستثناء. `composer test:mysql`: **213 tests / 1434 assertions**. `composer test`: **28 tests / 68 assertions**. P2-T02 بقيت Not Started.

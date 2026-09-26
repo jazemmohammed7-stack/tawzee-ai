@@ -74,7 +74,7 @@ class AuthenticationTest extends TestCase
             ->assertSee(__('authentication.temporary'))->assertSee('method="POST"', false);
         $this->assertSame('pending_setup', $user->company->status);
         $this->assertSame($user->company_id, $user->fresh()->company_id);
-        $this->assertFalse(method_exists($user, 'hasRole'));
+        $this->assertDatabaseCount('model_has_roles', 0);
     }
 
     #[DataProvider('failedLogins')]

@@ -138,7 +138,7 @@ erDiagram
 ## 4. Authorization
 
 - **Authentication:** Laravel قياسي (Session)، مع Rate Limiting على الدخول واستعادة كلمة المرور. مستخدم معطَّل (`is_active=false`) لا يدخل.
-- **الصلاحيات:** الأدوار والصلاحيات مربوطة بالشركة. المرشح المقترح حزمة `spatie/laravel-permission` مع ميزة **Teams** بحيث `team = company_id`؛ يتحقق الوكيل من التوافق مع إصدار Laravel المثبَّت، وإلا يُنفَّذ بديل بسيط بجداول `roles`, `permissions`, `role_permission`, `user_role` مقيدة بـ `company_id`.
+- **الصلاحيات:** اعتمدت `spatie/laravel-permission` 6.25.0 المتوافقة مع PHP 8.2 وLaravel 12، مع **Teams** بحيث `team_foreign_key = company_id`. يستمد Team Resolver الشركة حصريًا من `CurrentCompany` ويرفض محاولة تبديلها برقم يقدمه المستدعي. نموذج Role خاضع لـ `CompanyScope`، وإسناد الدور يتحقق من شركة المستخدم والدور. تعريف الصلاحيات والأدوار الافتراضية مؤجل إلى P2-T02.
 - **مصدر الحقيقة:** فئة/Enum واحدة `Access\Enums\Permission` تعرّف كل المفاتيح، وSeeder يبني الأدوار الافتراضية منها وفق [مصفوفة الصلاحيات](PROJECT.md#مصفوفة-الصلاحيات-mvp).
 - **Policies:** سياسة لكل Model رئيسي. تتحقق من (1) الصلاحية، (2) أن السجل يخص شركة المستخدم (طبقة دفاع ثانية فوق CompanyScope).
 - **لا Superuser bypass:** المالك يملك كل الصلاحيات **عبر دوره** لا عبر `Gate::before`.
@@ -248,6 +248,7 @@ erDiagram
 | D-15 | التقارير استعلامات مباشرة قراءة فقط | لا جداول تجميع مبكرة | Materialized views/ETL |
 | D-16 | مرجع founder_user_id محمي بقيد الشركة المركب (§15) | مؤسس ثابت لإسناد Owner لاحقًا دون صلاحيات مؤقتة | استنتاج المؤسس من أول مستخدم |
 | D-17 | إعادة التسجيل بنفس البريد تُرفض؛ قيد البريد يحسم التزامن (§15) | عملية غير مالية ذات هوية عالمية فريدة | إعادة حساب قائم أو إنشاء شركة مكررة |
+| D-18 | `spatie/laravel-permission` 6.25.0 مع Teams على `company_id` | متوافقة مع PHP 8.2/Laravel 12؛ تكامل موثوق مع `CurrentCompany` وعزل Role عبر `CompanyScope` | جداول RBAC مخصصة أو Team قابل للتعيين من الطلب |
 
 **عند مخالفة أي قرار** يُضاف صف/تعديل هنا بمبرره قبل التنفيذ.
 
