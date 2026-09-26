@@ -7,8 +7,8 @@
 | البند | القيمة |
 |---|---|
 | **المرحلة الحالية** | المرحلة 1 مكتملة على MariaDB؛ Phase 0 مكتملة على MariaDB |
-| **المهمة التالية** | `P2-T03` — Policies وأنماط `authorize()`؛ لم يبدأ |
-| **آخر تحديث** | 2026-09-26 — P1-T07: Done على MariaDB؛ Phase 2: Not Started |
+| **المهمة التالية** | `P2-T04` — إدارة المستخدمين؛ لم يبدأ |
+| **آخر تحديث** | 2026-09-26 — P2-T03: Done على MariaDB |
 
 **الحالات:** `Not Started` · `In Progress` · `Blocked` · `Done`. حالة كل مهمة موضحة في جدولها؛ لم يبدأ تنفيذ الوحدات التجارية.
 **الدليل:** عند `Done` تُضاف سطر «دليل» أسفل جدول المرحلة: الأمر الفعلي ونتيجته.
@@ -72,7 +72,7 @@ P0 ──► P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6
 |---|---|---|---|---|
 | P2-T01 | تقييم/تثبيت حزمة الصلاحيات مع Teams بحسب التوافق (أو بديل بسيط)، وتوثيق القرار | الحزمة تعمل بـ `company_id` كـ Team؛ القرار مسجل في ARCHITECTURE §10 | Feature: دور في شركة لا يؤثر في أخرى | Done |
 | P2-T02 | Enum `Permission` وSeeder الأدوار الافتراضية وفق [المصفوفة](PROJECT.md#مصفوفة-الصلاحيات-mvp)، ويُستدعى لتهيئة الأدوار بعد التسجيل الأساسي | كل شركة جديدة لها الأدوار الستة | Feature: مطابقة المصفوفة حرفيًا (Data-driven) | Done |
-| P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Not Started |
+| P2-T03 | قاعدة Policies وأنماط `authorize()` في Livewire/Controllers | نمط موثق ومثال عامل | Feature: 403 على كل دور غير مخوّل | Done |
 | P2-T04 | إدارة المستخدمين (FR-03): إنشاء/تعديل/تعطيل/إسناد دور داخل الشركة | مالك الشركة لا يُعطَّل ولا يُنزَّل دوره بواسطة غيره؛ لا يرى مستخدمي شركات أخرى | Feature: صلاحيات + عزل + حماية المالك | Not Started |
 | P2-T05 | صفحة إعدادات الشركة (`allow_negative_stock`, الاسم) | تتطلب `company.settings`؛ تُسجَّل في سجل النشاط | Feature: تفويض + تسجيل نشاط | Not Started |
 | P2-T06 | اختبار مصفوفة الصلاحيات الشامل على المسارات القائمة | لا مسار محمي بلا اختبار دور | Feature: مصفوفة دور × مسار | Not Started |
@@ -443,3 +443,19 @@ P0-T02 Done على MariaDB 10.4.32 فقط: القاعدتان tawzee_dev/tawzee_
 - `composer lint`: **Pint passed؛ PHP syntax 92 files passed**.
 
 لا migration جديدة، ولا PostgreSQL، ولا UI، ولا Policies، ولا `Gate::before`. **المهمة التالية P2-T03 ولم تبدأ.**
+
+### إغلاق P2-T03 — Policies ونمط authorize (2026-09-26)
+
+**الحالة: Done على MariaDB 10.4.32.** أضيف `TenantPolicy` كأساس يفشل مغلقًا ويتحقق من `CurrentCompany` وشركة المستخدم والمورد ثم مفتاح `Permission` عبر Spatie، مع `DocumentSequencePolicy` كمثال حقيقي صغير مسجل صراحة في Gate. أثبت Controller وLivewire تجريبيان للاختبار فقط أن الاستدعاء الموحد هو `$this->authorize(...)`؛ لا route إنتاج ولا UI أو CRUD جديد، ولا فحص أسماء أدوار ولا `Gate::before`.
+
+**العزل والسلوك:** نقص الصلاحية داخل الشركة يرجع 403، ومورد شركة أخرى محجوب بـCompanyScope ويرجع 404، وغياب السياق يفشل مغلقًا، وحقن `company_id` في query/header مرفوض. أصلح نموذج Permission بناء مخزن Spatie بجميع أدوار Teams بدل تخزين أدوار أول شركة فقط، مع تنظيف العلاقات المحملة عند تبديل/إغلاق `CurrentCompany`؛ تبقى استعلامات Role التطبيقية مقيدة بالشركة.
+
+- `AuthorizationPolicyTest`: **5 tests / 24 assertions**.
+- `PermissionTeamsTest`: **3 tests / 10 assertions**.
+- `CompanyRolesTest`: **4 tests / 31 assertions**.
+- regressions للمصادقة وTenant Middleware: **55 tests / 275 assertions**.
+- `composer test:mysql`: **222 tests / 1489 assertions**.
+- `composer test`: **28 tests / 68 assertions**.
+- `composer lint`: **Pint passed؛ PHP syntax 98 files passed**.
+
+لا migration، ولا تغيير schema أو بيانات، ولا PostgreSQL، ولا route أو UI إنتاج، ولم تبدأ إدارة المستخدمين. **المهمة التالية P2-T04 ولم تبدأ.**

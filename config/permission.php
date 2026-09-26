@@ -1,8 +1,8 @@
 <?php
 
+use App\Modules\Access\Models\Permission;
 use App\Modules\Access\Models\Role;
 use App\Support\Tenancy\CurrentCompanyPermissionTeamResolver;
-use Spatie\Permission\Models\Permission;
 
 return [
 

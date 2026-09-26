@@ -137,6 +137,13 @@ erDiagram
 
 ## 4. Authorization
 
+### نمط Policies المعتمد (P2-T03)
+
+- `TenantPolicy` هو الأساس المشترك للموارد التابعة للشركة: يفشل مغلقًا عند غياب `CurrentCompany`، ويتحقق من شركة المستخدم والسجل المحفوظين قبل فحص مفتاح `Permission` عبر Spatie. لا توجد مقارنة بأسماء الأدوار ولا `Gate::before`.
+- تسجل Policies يدويًا في `AppServiceProvider` عندما يكون الـModel والـPolicy في وحدتين مختلفتين. المثال الأول `DocumentSequencePolicy::view` يستخدم `Permission::CompanySettings`، وكل Controller وLivewire action يستدعي `$this->authorize(...)` صراحة.
+- مورد الشركة الأخرى يُحجب أولًا بـ`CompanyScope` وRoute Model Binding فيرجع 404، أما مورد الشركة الحالية مع صلاحية ناقصة فيصل إلى Policy ويرجع 403.
+- نموذج `Access\Models\Permission` يبني مخزن Spatie المشترك بعلاقة أدوار غير مقيدة بشركة واحدة، بينما تبقى استعلامات التطبيق على `Access\Models\Role` خاضعة لـ`CompanyScope`. عند دخول/خروج سياق الشركة تُفرغ العلاقات المحملة للمستخدم ومجموعة Spatie داخل العملية لمنع تسرب حالة الفريق في الطلبات وعمليات workers المتتابعة.
+
 - **Authentication:** Laravel قياسي (Session)، مع Rate Limiting على الدخول واستعادة كلمة المرور. مستخدم معطَّل (`is_active=false`) لا يدخل.
 - **الصلاحيات:** اعتمدت `spatie/laravel-permission` 6.25.0 المتوافقة مع PHP 8.2 وLaravel 12، مع **Teams** بحيث `team_foreign_key = company_id`. يستمد Team Resolver الشركة حصريًا من `CurrentCompany` ويرفض محاولة تبديلها برقم يقدمه المستدعي. نموذج Role خاضع لـ `CompanyScope`، وإسناد الدور يتحقق من شركة المستخدم والدور. تعريف الصلاحيات والأدوار الافتراضية مؤجل إلى P2-T02.
 - **مصدر الحقيقة:** فئة/Enum واحدة `Access\Enums\Permission` تعرّف كل المفاتيح، وSeeder يبني الأدوار الافتراضية منها وفق [مصفوفة الصلاحيات](PROJECT.md#مصفوفة-الصلاحيات-mvp).

@@ -9,6 +9,7 @@ use App\Modules\Company\Models\Company;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Auth\Factory;
+use Spatie\Permission\PermissionRegistrar;
 
 final class CurrentCompany
 {
@@ -37,10 +38,12 @@ final class CurrentCompany
     {
         $this->httpManaged = true;
         $this->internalId = null;
+        $this->clearPermissionState();
         try {
             return $callback();
         } finally {
             $this->internalId = null;
+            $this->clearPermissionState();
         }
     }
 
@@ -53,12 +56,25 @@ final class CurrentCompany
 
         $previous = $this->internalId;
         $this->internalId = (int) $company->getRawOriginal('id');
+        $this->clearPermissionState();
         try {
             $this->id();
 
             return $callback();
         } finally {
             $this->internalId = $previous;
+            $this->clearPermissionState();
+        }
+    }
+
+    private function clearPermissionState(): void
+    {
+        if (app()->bound(PermissionRegistrar::class)) {
+            app(PermissionRegistrar::class)->clearPermissionsCollection();
+        }
+        $user = $this->auth->guard()->user();
+        if ($user instanceof User) {
+            $user->unsetRelation('roles')->unsetRelation('permissions');
         }
     }
 
